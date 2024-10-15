@@ -6,6 +6,7 @@ import orderModel from "../../../Database/models/order.model.js";
 import express from 'express'
 
 import Stripe from 'stripe';
+import userModel from './../../../Database/models/user.model.js';
 const stripe = new Stripe('sk_test_51Q9vGDGgm2zKD6DvJ6NYmCiJxGEwwl2pr0iUMAOWSWx7HmGkIq4ts4bxeo7zCT3SYPgZuh5UJPmrsia55Vt0DUxp00L8wVYMxJ');
 
 export const createCashOrder = handleError(async (req, res, next) => {
@@ -86,7 +87,7 @@ export const onlinePayment = handleError(async (req, res, next) => {
 });
 
 
-export const createOnlineOrder = handleError(async (req, res) => {
+export const createOnlineOrder = handleError(async (req, res,next) => {
   const sig = req.headers['stripe-signature'];
 
   let event; 
@@ -99,8 +100,37 @@ export const createOnlineOrder = handleError(async (req, res) => {
 
 
   if(event.type == "checkout.session.completed"){
-    const checkoutSessionCompleted = event.data.object;
-    console.log("done")
+    const e = event.data.object;
+    
+    let cart = await cartModel.findById(e.client_reference_id)
+    if(!cart)
+      return next(new AppError("Invalid cart", 400))
+
+    let user = await userModel.findOne({email: e.customer_email})
+    if(!user)
+      return next(new AppError("Invalid user", 400))
+    
+    let order = new orderModel({
+      user: user._id,
+      cartItems: cart.cartItems,
+      totalOrderPrice: e.amount_total / 100,
+      shippingAddress: e.metadata,
+    });
+    
+    await order.save();
+
+    let options = cart.cartItems.map((ele) => ({
+      updateOne: {
+        filter: {
+          _id: ele.product,
+        },
+        update: {
+          $inc: { quantity: -ele.quantity, sold: ele.quantity },
+        },
+      },
+    }));
+
+    await productModel.bulkWrite(options);
   } else {
     console.log(`Unhandled event type ${event.type}`);
   }
