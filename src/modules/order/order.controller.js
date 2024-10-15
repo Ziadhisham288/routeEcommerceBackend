@@ -87,7 +87,7 @@ export const onlinePayment = handleError(async (req, res, next) => {
 
 const app = express()
 
-app.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
+app.post('/webhook', express.raw({type: 'application/json'}), async (req, res) => {
   const sig = req.headers['stripe-signature'];
 
   let event; 
@@ -111,6 +111,3 @@ app.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
 });
 
 app.listen(4242, () => console.log("Running on port 4242"))
-
-export const createOnlineOrder = handleError(async (req,res,next) => {
-})
