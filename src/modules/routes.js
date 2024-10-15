@@ -13,6 +13,11 @@ import wishListRouter from "./wishlist/wishlist.routes.js"
 
 
 export const appRoutes = (app) => {
+
+  app.get("/", (req,res,next) => {
+    res.status(200).json({message : "Hello from server"})
+  })
+
   app.use('/api/v1/category',categoryRouter)
   app.use('/api/v1/subCategory',subCategoryRouter)
   app.use('/api/v1/brand',brandRouter)
